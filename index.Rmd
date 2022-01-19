@@ -1,5 +1,5 @@
 ---
-title: "Project"
+title: "Practical Machine Learning Final Project"
 author: "Talia Alexander"
 output: html_document
 ---
@@ -13,7 +13,7 @@ library(AppliedPredictiveModeling)
 ```
 
 
-### Background
+## Background
 
 Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
 
@@ -37,21 +37,22 @@ Data information:
 
 
 
-### Read in data 
+## Read in data 
 
 ```{r}
-train_raw <- read.csv("C:/Users/ruf6/Downloads/pml-training.csv")
-test_raw <- read.csv("C:/Users/ruf6/Downloads/pml-testing.csv")
+train_raw <- read.csv("pml-training.csv")
+test_raw <- read.csv("pml-testing.csv")
 
 dim(train_raw)
 dim(test_raw)
 ```
+
 The raw training dataset has 19,622 observations of 160 variables. The test dataset has 20 observations of 160 variables. 
 
 
-### Cleaning data
+## Cleaning data
 
-We will remove unnecessary and mostly-NA variables.
+Irrelevant and mostly-NA variables will be removed.
 
 ```{r}
 # remove variables that are not relevant to this analysis
@@ -65,12 +66,13 @@ train_raw <- train_raw[, -nearZeroVar(train_raw)]
 
 dim(train_raw)
 ```
+
 After the data cleaning step, the number of variables decreased from 160 to 53. 
 
 
-### Separate into new training and testing
+## Separate into new training and testing
 
-We will split the original training data set into a new training set (70%) and a validation set (30%). The test set will be left out until the end when we apply the models fit using the testing and validation sets.
+The original training data set will be split into a new training set (70%) and a validation set (30%). The test set will be left out until the end.
 
 ```{r}
 set.seed(123)
@@ -81,15 +83,19 @@ validation <- train_raw[-inTrain, ]
 dim(training)
 dim(validation)
 
+# 4 fold cross validation
 control <- trainControl(method="cv", 4, verboseIter=FALSE)
 ```
 
-The new training set has 13,737 observations and the validation set has 5,885 observations, each with 53 variables. We will use 4-fold cross validation.
+The new training set has 13,737 observations and the validation set has 5,885 observations, each with 53 variables. 
 
+
+## Fitting models
+
+Random forest, gradient boosting machine (GBM), and support vector machine (SVM) models will be fit; the most accurate model will be chosen to predict the outcome of the 20 test observations.
 
 ### Random forest
 
-First, we will try a random forest.
 
 ```{r}
 set.seed(123)
@@ -101,13 +107,12 @@ plot(mod_RF)
 
 acc_RF <- confusionMatrix(pred_RF, factor(validation$classe))
 acc_RF
-
 ```
 
 The random forest model has an accuracy of 99.37%.
 
 
-### Boosting
+### Boosting - GBM
 
 ```{r}
 set.seed(123)
@@ -119,7 +124,6 @@ plot(mod_GBM)
 
 acc_GBM <- confusionMatrix(pred_GBM, factor(validation$classe))
 acc_GBM
-
 ```
 
 The accuracy of the GBM model is 96.16%.
@@ -135,7 +139,6 @@ pred_SVM <- predict(mod_SVM, validation)
 
 acc_SVM <- confusionMatrix(pred_SVM, factor(validation$classe))
 acc_SVM
-
 ```
 
 The accuracy of the SVM model is 78.61%, which is much lower than the Random Forest and GBM.
@@ -143,12 +146,11 @@ The accuracy of the SVM model is 78.61%, which is much lower than the Random For
 
 ### Predictions on test set
 
-Now we will predict the classe outcome on the 20 cases in the test set using the best performing model: Random Forest, with 99.37% accuracy.
+Now the classe outcome will be predicted on the 20 cases in the test set using the best performing model: Random Forest.
 
 ```{r}
 pred_RF_test <- predict(mod_RF, test_raw)
 pred_RF_test
-
 ```
 
 
