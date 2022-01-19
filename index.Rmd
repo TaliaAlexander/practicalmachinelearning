@@ -1,0 +1,154 @@
+---
+title: "Project"
+author: "Talia Alexander"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(caret)
+library(gbm)
+library(AppliedPredictiveModeling)
+```
+
+
+### Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+
+The goals of this project are to: 
+
+  - use data from accelerometers on the belt, forearm, arm, and dumbbell
+  
+  - predict the manner in which they did the exercise ("classe" variable)
+  
+  - use your prediction model to predict 20 different test cases
+  
+  - create a report describing how you build your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did
+  
+  
+Data information:
+
+  - The training data for this project are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+  
+  - The test data are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+
+
+### Read in data 
+
+```{r}
+train_raw <- read.csv("C:/Users/ruf6/Downloads/pml-training.csv")
+test_raw <- read.csv("C:/Users/ruf6/Downloads/pml-testing.csv")
+
+dim(train_raw)
+dim(test_raw)
+```
+The raw training dataset has 19,622 observations of 160 variables. The test dataset has 20 observations of 160 variables. 
+
+
+### Cleaning data
+
+We will remove unnecessary and mostly-NA variables.
+
+```{r}
+# remove variables that are not relevant to this analysis
+train_raw <- train_raw[, -c(1:7)]
+
+# remove variables with mostly NAs
+train_raw <- train_raw[, colMeans(is.na(train_raw)) < 0.9]
+
+# remove variables with near zero variance
+train_raw <- train_raw[, -nearZeroVar(train_raw)]
+
+dim(train_raw)
+```
+After the data cleaning step, the number of variables decreased from 160 to 53. 
+
+
+### Separate into new training and testing
+
+We will split the original training data set into a new training set (70%) and a validation set (30%). The test set will be left out until the end when we apply the models fit using the testing and validation sets.
+
+```{r}
+set.seed(123)
+inTrain <- createDataPartition(train_raw$classe, p=0.7, list=FALSE)
+training <- train_raw[inTrain, ]
+validation <- train_raw[-inTrain, ]
+
+dim(training)
+dim(validation)
+
+control <- trainControl(method="cv", 4, verboseIter=FALSE)
+```
+
+The new training set has 13,737 observations and the validation set has 5,885 observations, each with 53 variables. We will use 4-fold cross validation.
+
+
+### Random forest
+
+First, we will try a random forest.
+
+```{r}
+set.seed(123)
+
+mod_RF <- train(classe ~., data=training, trControl=control, method="rf") 
+pred_RF <- predict(mod_RF, validation)
+
+plot(mod_RF)
+
+acc_RF <- confusionMatrix(pred_RF, factor(validation$classe))
+acc_RF
+
+```
+
+The random forest model has an accuracy of 99.37%.
+
+
+### Boosting
+
+```{r}
+set.seed(123)
+
+mod_GBM <- train(classe ~., data=training, method="gbm", trControl=control, verbose=FALSE) 
+pred_GBM <- predict(mod_GBM, validation)
+
+plot(mod_GBM)
+
+acc_GBM <- confusionMatrix(pred_GBM, factor(validation$classe))
+acc_GBM
+
+```
+
+The accuracy of the GBM model is 96.16%.
+
+
+### Support Vector Machine
+
+```{r}
+set.seed(123)
+
+mod_SVM <- train(classe ~., data=training, method="svmLinear", trControl=control, verbose=FALSE) 
+pred_SVM <- predict(mod_SVM, validation)
+
+acc_SVM <- confusionMatrix(pred_SVM, factor(validation$classe))
+acc_SVM
+
+```
+
+The accuracy of the SVM model is 78.61%, which is much lower than the Random Forest and GBM.
+
+
+### Predictions on test set
+
+Now we will predict the classe outcome on the 20 cases in the test set using the best performing model: Random Forest, with 99.37% accuracy.
+
+```{r}
+pred_RF_test <- predict(mod_RF, test_raw)
+pred_RF_test
+
+```
+
+
